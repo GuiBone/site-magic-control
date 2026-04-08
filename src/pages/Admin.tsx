@@ -6,12 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { LogOut, Save, FileText, Settings, LayoutDashboard, Plus, Trash2, Search, Filter, Phone, Mail, Paperclip, MessageSquare, ExternalLink, UploadCloud, Loader2, Star } from "lucide-react";
+import { LogOut, Save, FileText, Settings, LayoutDashboard, Plus, Trash2, Phone, Mail, Paperclip, MessageSquare, UploadCloud, Loader2, Star, ChevronDown, ChevronRight, Images, Quote } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAllTestimonials } from "@/hooks/useTestimonials";
 
@@ -53,6 +52,9 @@ export default function Admin() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const [activeSection, setActiveSection] = useState<string>("content");
+  const [activeSubsection, setActiveSubsection] = useState<string>("hero");
+  const [contentExpanded, setContentExpanded] = useState(true);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -183,6 +185,15 @@ export default function Admin() {
     seo: "SEO (Meta Tags)",
   };
 
+  const contentSubsections = [
+    { key: "hero", label: "Hero (Início)" },
+    { key: "about", label: "Sobre Nós" },
+    { key: "services", label: "Serviços" },
+    { key: "contact", label: "Contato" },
+    { key: "footer", label: "Rodapé" },
+    { key: "seo", label: "SEO (Meta Tags)" },
+  ];
+
   const groupedContent: Record<string, CMSField[]> = {};
   if (contentFields) {
     contentFields.forEach(f => {
@@ -191,58 +202,204 @@ export default function Admin() {
     });
   }
 
+  const renderContent = () => {
+    if (!contentFields || contentFields.length === 0) {
+      return <p className="text-muted-foreground text-center py-8">Nenhum campo de conteúdo encontrado.</p>;
+    }
+
+    if (activeSubsection && groupedContent[activeSubsection]) {
+      return (
+        <ContentEditor
+          section={sectionLabels[activeSubsection] || activeSubsection}
+          fields={groupedContent[activeSubsection]}
+          onSave={(updated) => updateContent.mutate(updated)}
+          isSaving={updateContent.isPending}
+        />
+      );
+    }
+
+    return (
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {contentSubsections.map(sub => (
+          <Card 
+            key={sub.key} 
+            className="cursor-pointer hover:border-primary transition-colors"
+            onClick={() => {
+              setActiveSubsection(sub.key);
+              setActiveSection("content");
+            }}
+          >
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">{sub.label}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                {groupedContent[sub.key]?.length || 0} campos
+              </p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  };
 
   return (
-    <div className="min-h-screen bg-secondary/30">
-      <header className="bg-background border-b sticky top-0 z-50">
-        <div className="container mx-auto flex items-center justify-between h-14 px-4">
+    <div className="min-h-screen bg-secondary/30 flex">
+      <aside className="w-64 bg-background border-r h-screen sticky top-0 flex flex-col">
+        <div className="p-4 border-b">
           <div className="flex items-center gap-2">
             <LayoutDashboard className="h-5 w-5 text-primary" />
             <span className="font-bold font-['Space_Grotesk']">Admin DTF ARTZONE</span>
           </div>
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" asChild>
-              <a href="/" target="_blank">Ver Site</a>
-            </Button>
-            <Button variant="outline" size="sm" onClick={signOut}>
-              <LogOut className="h-4 w-4 mr-1" /> Sair
-            </Button>
-          </div>
         </div>
-      </header>
 
-      <div className="container mx-auto px-4 py-8">
-        <Tabs defaultValue="content">
-          <TabsList className="mb-8">
-            <TabsTrigger value="content"><Settings className="h-4 w-4 mr-1" /> Conteúdo</TabsTrigger>
-            <TabsTrigger value="budgets"><FileText className="h-4 w-4 mr-1" /> Orçamentos</TabsTrigger>
-            <TabsTrigger value="services"><LayoutDashboard className="h-4 w-4 mr-1" /> Serviços</TabsTrigger>
-            <TabsTrigger value="gallery"><LayoutDashboard className="h-4 w-4 mr-1" /> Galeria</TabsTrigger>
-            <TabsTrigger value="testimonials"><Settings className="h-4 w-4 mr-1" /> Depoimentos</TabsTrigger>
-          </TabsList>
+        <nav className="flex-1 overflow-y-auto p-2 space-y-1">
+          <div>
+            <button
+              onClick={() => {
+                setActiveSection("content");
+                setContentExpanded(prev => !prev);
+              }}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                activeSection === "content" 
+                  ? "bg-primary/10 text-primary" 
+                  : "hover:bg-muted"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <Settings className="h-4 w-4" />
+                <span>Conteúdo</span>
+              </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setContentExpanded(prev => !prev);
+                }}
+                className="p-0.5 hover:bg-muted rounded"
+              >
+                {contentExpanded ? (
+                  <ChevronDown className="h-4 w-4 transition-transform" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 transition-transform" />
+                )}
+              </button>
+            </button>
 
-          <TabsContent value="content" className="space-y-6">
-            {!contentFields || contentFields.length === 0 ? (
-               <p className="text-muted-foreground text-center py-8">Nenhum campo de conteúdo encontrado.</p>
-            ) : Object.keys(groupedContent).map((sectionKey) => (
-              <ContentEditor
-                key={sectionKey}
-                section={sectionLabels[sectionKey] || sectionKey}
-                fields={groupedContent[sectionKey]}
-                onSave={(updated) => updateContent.mutate(updated)}
-                isSaving={updateContent.isPending}
-              />
-            ))}
-          </TabsContent>
+            {contentExpanded && (
+              <div className="ml-4 mt-1 space-y-1 border-l-2 border-muted pl-2">
+                {contentSubsections.map(sub => (
+                  <button
+                    key={sub.key}
+                    onClick={() => {
+                      setActiveSection("content");
+                      setActiveSubsection(sub.key);
+                    }}
+                    className={`w-full text-left px-3 py-1.5 rounded-md text-sm transition-colors ${
+                      activeSection === "content" && activeSubsection === sub.key
+                        ? "bg-primary/10 text-primary font-medium"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {sub.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
-          <TabsContent value="budgets" className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold tracking-tight">Mini CRM: Orçamentos</h2>
+          <button
+            onClick={() => {
+              setActiveSection("budgets");
+              setActiveSubsection("");
+            }}
+            className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeSection === "budgets" 
+                ? "bg-primary/10 text-primary" 
+                : "hover:bg-muted"
+            }`}
+          >
+            <FileText className="h-4 w-4" />
+            <span>Orçamentos</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setActiveSection("services");
+              setActiveSubsection("");
+            }}
+            className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeSection === "services" 
+                ? "bg-primary/10 text-primary" 
+                : "hover:bg-muted"
+            }`}
+          >
+            <LayoutDashboard className="h-4 w-4" />
+            <span>Serviços</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setActiveSection("gallery");
+              setActiveSubsection("");
+            }}
+            className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeSection === "gallery" 
+                ? "bg-primary/10 text-primary" 
+                : "hover:bg-muted"
+            }`}
+          >
+            <Images className="h-4 w-4" />
+            <span>Galeria</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setActiveSection("testimonials");
+              setActiveSubsection("");
+            }}
+            className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeSection === "testimonials" 
+                ? "bg-primary/10 text-primary" 
+                : "hover:bg-muted"
+            }`}
+          >
+            <Quote className="h-4 w-4" />
+            <span>Depoimentos</span>
+          </button>
+        </nav>
+      </aside>
+
+      <div className="flex-1 flex flex-col">
+        <header className="bg-background border-b sticky top-0 z-50">
+          <div className="flex items-center justify-between h-14 px-6">
+            <div className="text-sm text-muted-foreground">
+              {activeSection === "content" 
+                ? `Conteúdo > ${sectionLabels[activeSubsection] || "Selecione"}`
+                : activeSection.charAt(0).toUpperCase() + activeSection.slice(1)
+              }
             </div>
-            <QuoteCRM quotes={quotes || []} />
-          </TabsContent>
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="sm" asChild>
+                <a href="/" target="_blank">Ver Site</a>
+              </Button>
+              <Button variant="outline" size="sm" onClick={signOut}>
+                <LogOut className="h-4 w-4 mr-1" /> Sair
+              </Button>
+            </div>
+          </div>
+        </header>
 
-          <TabsContent value="services">
+        <main className="p-6">
+          {activeSection === "content" && renderContent()}
+
+          {activeSection === "budgets" && (
+            <div className="space-y-6">
+              <h2 className="text-2xl font-bold tracking-tight">Orçamentos</h2>
+              <QuoteCRM quotes={quotes || []} />
+            </div>
+          )}
+
+          {activeSection === "services" && (
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Serviços</CardTitle>
@@ -256,16 +413,12 @@ export default function Admin() {
                 ))}
               </CardContent>
             </Card>
-          </TabsContent>
+          )}
 
-          <TabsContent value="gallery">
-            <GalleryAdmin />
-          </TabsContent>
+          {activeSection === "gallery" && <GalleryAdmin />}
 
-          <TabsContent value="testimonials">
-            <TestimonialsAdmin />
-          </TabsContent>
-        </Tabs>
+          {activeSection === "testimonials" && <TestimonialsAdmin />}
+        </main>
       </div>
     </div>
   );

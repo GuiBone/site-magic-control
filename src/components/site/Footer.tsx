@@ -21,13 +21,18 @@ export function Footer({ content }: { content?: Record<string, string> }) {
               Links Rápidos
             </h4>
             <nav className="flex flex-col gap-2">
-              {["Início", "Sobre", "Serviços", "Orçamento"].map((label) => (
+              {[
+                { label: "Início", href: "#hero" },
+                { label: "Sobre", href: "#about" },
+                { label: "Serviços", href: "#services" },
+                { label: "Orçamento", href: "#budget" },
+              ].map((item) => (
                 <a
-                  key={label}
-                  href={`#${label.toLowerCase().replace("í", "hero").replace("início", "hero")}`}
+                  key={item.label}
+                  href={item.href}
                   className="text-sm opacity-60 hover:opacity-100 transition-opacity"
                 >
-                  {label}
+                  {item.label}
                 </a>
               ))}
             </nav>

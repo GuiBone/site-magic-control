@@ -16,11 +16,6 @@ const DEFAULT_SEO: SEOData = {
   favicon: ""
 };
 
-function getMetaContent(name: string): string | null {
-  const meta = document.querySelector(`meta[name="${name}"], meta[property="${name}"]`);
-  return meta ? meta.getAttribute("content") : null;
-}
-
 function setMetaTag(name: string, content: string, isProperty = false): void {
   let meta = document.querySelector(
     isProperty 
@@ -42,15 +37,17 @@ function setMetaTag(name: string, content: string, isProperty = false): void {
 }
 
 function setLinkTag(rel: string, href: string): void {
-  let link = document.querySelector(`link[rel="${rel}"]`);
+  const existingLink = document.querySelector(`link[rel="${rel}"]`);
   
-  if (!link) {
-    link = document.createElement("link");
-    link.setAttribute("rel", rel);
-    document.head.appendChild(link);
+  if (existingLink) {
+    existingLink.setAttribute("href", href);
+    return;
   }
   
+  const link = document.createElement("link");
+  link.setAttribute("rel", rel);
   link.setAttribute("href", href);
+  document.head.appendChild(link);
 }
 
 export function useSEO(content: Record<string, string> | undefined) {
