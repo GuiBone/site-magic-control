@@ -1,16 +1,25 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { Header } from "@/components/site/Header";
+import { HeroSection } from "@/components/site/HeroSection";
+import { AboutSection } from "@/components/site/AboutSection";
+import { ServicesSection } from "@/components/site/ServicesSection";
+import { BudgetForm } from "@/components/site/BudgetForm";
+import { Footer } from "@/components/site/Footer";
+import { useSiteContent, useServices } from "@/hooks/useContent";
 
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
+const Index = () => {
+  const { data: content } = useSiteContent();
+  const { data: services } = useServices();
+
   return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
+    <div className="min-h-screen">
+      <Header />
+      <HeroSection content={content?.hero} />
+      <AboutSection content={content?.about} />
+      <ServicesSection services={services} />
+      <BudgetForm services={services} />
+      <Footer />
     </div>
   );
 };
-
-const Index = PlaceholderIndex;
 
 export default Index;
