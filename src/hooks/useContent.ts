@@ -25,7 +25,16 @@ export const DEFAULT_CONTENT_FALLBACK: Record<string, string> = {
   contact_subtitle: "Solicite um orçamento e receba atendimento rápido pelo WhatsApp.",
   contact_phone: "(45) 99999-9999",
   contact_email: "contato@dtfartzone.com.br",
-  footer_text: "© DTF ARTZONE. Todos os direitos reservados."
+  footer_text: "© DTF ARTZONE. Todos os direitos reservados.",
+  whatsapp_number: "5545999999999",
+  whatsapp_message: "Olá! Vim pelo site e gostaria de solicitar um orçamento.",
+  whatsapp_label: "Fale conosco",
+  whatsapp_cta_text: "Solicitar orçamento pelo WhatsApp",
+  seo_title: "DTF ARTZONE",
+  seo_description: "Impressão DTF com qualidade profissional, adesivos personalizados e atendimento ágil.",
+  seo_keywords: "dtf, impressão dtf, adesivos personalizados, gráfica dtf",
+  seo_og_image: "",
+  seo_favicon: ""
 };
 
 export interface Service {

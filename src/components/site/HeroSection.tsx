@@ -1,9 +1,18 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";interface Props {
+import { ArrowRight } from "lucide-react";
+import { generateWhatsAppLink, getWhatsAppConfig } from "@/utils/whatsapp";
+
+interface Props {
   content?: Record<string, string>;
 }
 
 export function HeroSection({ content }: Props) {
+  const whatsappConfig = getWhatsAppConfig(content);
+  const whatsappLink = generateWhatsAppLink(
+    whatsappConfig.number,
+    whatsappConfig.message
+  );
+
   return (
     <section id="hero" className="relative min-h-screen flex items-center pt-16 overflow-hidden">
       <div 
@@ -26,8 +35,8 @@ export function HeroSection({ content }: Props) {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
             <Button size="lg" asChild className="text-base px-8">
-              <a href={content?.hero_cta_link || "#budget"}>
-                {content?.hero_cta_text || "Solicitar Orçamento"} <ArrowRight className="ml-2 h-5 w-5" />
+              <a href={whatsappLink}>
+                {whatsappConfig.ctaText} <ArrowRight className="ml-2 h-5 w-5" />
               </a>
             </Button>
             <Button size="lg" variant="outline" asChild className="text-base px-8">

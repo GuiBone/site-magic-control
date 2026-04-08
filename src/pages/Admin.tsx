@@ -11,8 +11,9 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { LogOut, Save, FileText, Settings, LayoutDashboard, Plus, Trash2, Search, Filter, Phone, Mail, Paperclip, MessageSquare, ExternalLink, UploadCloud, Loader2 } from "lucide-react";
+import { LogOut, Save, FileText, Settings, LayoutDashboard, Plus, Trash2, Search, Filter, Phone, Mail, Paperclip, MessageSquare, ExternalLink, UploadCloud, Loader2, Star } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAllTestimonials } from "@/hooks/useTestimonials";
 
 interface CMSField {
   id: string;
@@ -179,6 +180,7 @@ export default function Admin() {
     services: "Serviços",
     contact: "Contato",
     footer: "Rodapé",
+    seo: "SEO (Meta Tags)",
   };
 
   const groupedContent: Record<string, CMSField[]> = {};
@@ -216,6 +218,7 @@ export default function Admin() {
             <TabsTrigger value="budgets"><FileText className="h-4 w-4 mr-1" /> Orçamentos</TabsTrigger>
             <TabsTrigger value="services"><LayoutDashboard className="h-4 w-4 mr-1" /> Serviços</TabsTrigger>
             <TabsTrigger value="gallery"><LayoutDashboard className="h-4 w-4 mr-1" /> Galeria</TabsTrigger>
+            <TabsTrigger value="testimonials"><Settings className="h-4 w-4 mr-1" /> Depoimentos</TabsTrigger>
           </TabsList>
 
           <TabsContent value="content" className="space-y-6">
@@ -257,6 +260,10 @@ export default function Admin() {
 
           <TabsContent value="gallery">
             <GalleryAdmin />
+          </TabsContent>
+
+          <TabsContent value="testimonials">
+            <TestimonialsAdmin />
           </TabsContent>
         </Tabs>
       </div>
@@ -909,6 +916,304 @@ function GalleryItemCard({
           </label>
         </div>
         <Button onClick={handleSave} disabled={isSaving} size="sm" className="w-full">
+          {isSaving ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Save className="h-4 w-4 mr-1" />
+          )}
+          {isSaving ? "Salvando..." : "Salvar"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+interface TestimonialRow {
+  id: string;
+  name: string;
+  role: string | null;
+  company: string | null;
+  content: string;
+  avatar_url: string | null;
+  rating: number;
+  display_order: number;
+  is_active: boolean;
+}
+
+function TestimonialsAdmin() {
+  const { data: testimonials, isLoading } = useAllTestimonials();
+  const queryClient = useQueryClient();
+
+  const createTestimonial = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("testimonials").insert({
+        name: "Novo Cliente",
+        content: "Seu depoimento aqui...",
+        rating: 5,
+        display_order: 99,
+        is_active: false,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-testimonials"] });
+      toast.success("Depoimento criado!");
+    },
+    onError: () => toast.error("Erro ao criar depoimento."),
+  });
+
+  const deleteTestimonial = async (id: string) => {
+    if (!confirm("Deseja realmente excluir este depoimento?")) return;
+    const { error } = await supabase.from("testimonials").delete().eq("id", id);
+    if (error) {
+      toast.error("Erro ao excluir depoimento.");
+      return;
+    }
+    queryClient.invalidateQueries({ queryKey: ["admin-testimonials"] });
+    toast.success("Depoimento excluído!");
+  };
+
+  const updateTestimonial = async (testimonial: TestimonialRow) => {
+    const { error } = await supabase
+      .from("testimonials")
+      .update({
+        name: testimonial.name,
+        role: testimonial.role,
+        company: testimonial.company,
+        content: testimonial.content,
+        avatar_url: testimonial.avatar_url,
+        rating: testimonial.rating,
+        display_order: testimonial.display_order,
+        is_active: testimonial.is_active,
+      })
+      .eq("id", testimonial.id);
+
+    if (error) {
+      toast.error("Erro ao atualizar depoimento.");
+      return;
+    }
+    queryClient.invalidateQueries({ queryKey: ["admin-testimonials"] });
+    queryClient.invalidateQueries({ queryKey: ["testimonials"] });
+    toast.success("Depoimento atualizado!");
+  };
+
+  const uploadAvatar = async (file: File, id: string): Promise<string | null> => {
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${Math.random().toString(36)}.${fileExt}`;
+    const filePath = `testimonials/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("site-assets")
+      .upload(filePath, file);
+
+    if (uploadError) {
+      toast.error("Erro ao fazer upload da imagem");
+      return null;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from("site-assets")
+      .getPublicUrl(filePath);
+
+    return publicUrl;
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle>Depoimentos</CardTitle>
+        <Button
+          onClick={() => createTestimonial.mutate()}
+          disabled={createTestimonial.isPending}
+          size="sm"
+        >
+          <Plus className="h-4 w-4 mr-1" /> Novo Depoimento
+        </Button>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : testimonials && testimonials.length > 0 ? (
+          <div className="space-y-4">
+            {testimonials.map((t) => (
+              <TestimonialCard
+                key={t.id}
+                testimonial={t}
+                onUpdate={updateTestimonial}
+                onDelete={deleteTestimonial}
+                onUploadAvatar={uploadAvatar}
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="text-muted-foreground text-center py-8">
+            Nenhum depoimento encontrado. Adicione seu primeiro!
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function TestimonialCard({
+  testimonial,
+  onUpdate,
+  onDelete,
+  onUploadAvatar,
+}: {
+  testimonial: TestimonialRow;
+  onUpdate: (t: TestimonialRow) => void;
+  onDelete: (id: string) => void;
+  onUploadAvatar: (file: File, id: string) => Promise<string | null>;
+}) {
+  const [form, setForm] = useState(testimonial);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+
+  useEffect(() => {
+    setForm(testimonial);
+  }, [testimonial]);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    await onUpdate(form);
+    setIsSaving(false);
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const url = await onUploadAvatar(file, form.id);
+    if (url) {
+      setForm({ ...form, avatar_url: url });
+    }
+    setIsUploading(false);
+  };
+
+  return (
+    <div className="border rounded-lg p-4 space-y-4 bg-card">
+      <div className="flex items-start justify-between">
+        <div className="flex gap-4">
+          <div className="relative">
+            {form.avatar_url ? (
+              <img
+                src={form.avatar_url}
+                alt={form.name}
+                className="w-16 h-16 rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                <span className="text-xl font-semibold text-primary">
+                  {form.name.charAt(0).toUpperCase()}
+                </span>
+              </div>
+            )}
+            <label className="absolute bottom-0 right-0 bg-primary text-primary-foreground rounded-full p-1 cursor-pointer hover:bg-primary/90">
+              <UploadCloud className="h-3 w-3" />
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarUpload}
+                disabled={isUploading}
+                className="hidden"
+              />
+            </label>
+            {isUploading && (
+              <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
+                <Loader2 className="h-4 w-4 animate-spin text-white" />
+              </div>
+            )}
+          </div>
+          <div className="space-y-2 flex-1">
+            <Input
+              placeholder="Nome"
+              value={form.name || ""}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              className="font-medium"
+            />
+            <div className="flex gap-2">
+              <Input
+                placeholder="Cargo/Função"
+                value={form.role || ""}
+                onChange={(e) => setForm({ ...form, role: e.target.value })}
+                className="text-sm"
+              />
+              <Input
+                placeholder="Empresa"
+                value={form.company || ""}
+                onChange={(e) => setForm({ ...form, company: e.target.value })}
+                className="text-sm"
+              />
+            </div>
+          </div>
+        </div>
+        <button
+          onClick={() => onDelete(testimonial.id)}
+          className="text-destructive hover:bg-destructive/10 p-2 rounded"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
+
+      <Textarea
+        placeholder="Depoimento"
+        value={form.content || ""}
+        onChange={(e) => setForm({ ...form, content: e.target.value })}
+        rows={3}
+      />
+
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium">Nota:</span>
+          <div className="flex gap-1">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                key={star}
+                type="button"
+                onClick={() => setForm({ ...form, rating: star })}
+                className="p-0.5"
+              >
+                <Star
+                  className={`h-5 w-5 ${
+                    star <= form.rating
+                      ? "fill-yellow-400 text-yellow-400"
+                      : "fill-muted text-muted"
+                  }`}
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium">Ordem:</span>
+          <Input
+            type="number"
+            value={form.display_order || 0}
+            onChange={(e) =>
+              setForm({ ...form, display_order: Number(e.target.value) })
+            }
+            className="w-20 text-sm"
+          />
+        </div>
+        <label className="flex items-center gap-2 text-sm cursor-pointer">
+          <input
+            type="checkbox"
+            checked={form.is_active || false}
+            onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
+            className="w-4 h-4 cursor-pointer"
+          />
+          Ativo
+        </label>
+        <Button
+          onClick={handleSave}
+          disabled={isSaving}
+          size="sm"
+          className="ml-auto"
+        >
           {isSaving ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (

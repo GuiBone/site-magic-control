@@ -1,4 +1,9 @@
+import { generateWhatsAppLink, getWhatsAppConfig } from "@/utils/whatsapp";
+
 export function Footer({ content }: { content?: Record<string, string> }) {
+  const whatsappConfig = getWhatsAppConfig(content);
+  const whatsappLink = generateWhatsAppLink(whatsappConfig.number, whatsappConfig.message);
+
   return (
     <footer id="contact" className="bg-foreground text-background py-16">
       <div className="container mx-auto px-4">
@@ -34,6 +39,14 @@ export function Footer({ content }: { content?: Record<string, string> }) {
             <div className="text-sm opacity-60 space-y-1">
               <p>{content?.contact_phone || "(45) 99999-9999"}</p>
               <p>{content?.contact_email || "contato@dtfartzone.com.br"}</p>
+              <a
+                href={whatsappLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block mt-2 text-green-400 hover:text-green-300 transition-colors"
+              >
+                WhatsApp
+              </a>
             </div>
           </div>
         </div>
