@@ -10,10 +10,11 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 };
 
 interface Props {
+  content?: Record<string, string>;
   services?: Service[];
 }
 
-export function ServicesSection({ services }: Props) {
+export function ServicesSection({ content, services }: Props) {
   const items = services ?? [];
 
   return (
@@ -21,10 +22,10 @@ export function ServicesSection({ services }: Props) {
       <div className="container mx-auto px-4">
         <div className="text-center space-y-4 mb-16">
           <p className="text-sm font-semibold text-primary uppercase tracking-widest">
-            O que fazemos
+            {content?.services_subtitle || "Conheça as soluções que oferecemos"}
           </p>
           <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
-            Nossos Serviços
+            {content?.services_title || "Nossos Serviços"}
           </h2>
         </div>
         <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">

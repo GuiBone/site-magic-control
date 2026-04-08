@@ -14,13 +14,13 @@ import { toast } from "sonner";
 import { LogOut, Save, FileText, Settings, LayoutDashboard } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-interface ContentRow {
+interface CMSField {
   id: string;
-  section_key: string;
-  title: string | null;
-  subtitle: string | null;
-  content: string | null;
-  image_url: string | null;
+  key: string;
+  label: string;
+  value: string;
+  section: string;
+  field_type: string;
 }
 
 interface BudgetRow {
@@ -68,12 +68,12 @@ export default function Admin() {
     }
   }, [user]);
 
-  const { data: contentRows } = useQuery({
+  const { data: contentFields } = useQuery({
     queryKey: ["admin-content"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("site_content").select("*");
+      const { data, error } = await supabase.from("site_content").select("*").order("section");
       if (error) throw error;
-      return data as ContentRow[];
+      return data as CMSField[];
     },
     enabled: isAdmin === true,
   });
@@ -105,11 +105,17 @@ export default function Admin() {
   });
 
   const updateContent = useMutation({
-    mutationFn: async (row: ContentRow) => {
+    mutationFn: async (fields: CMSField[]) => {
       const { error } = await supabase
         .from("site_content")
-        .update({ title: row.title, subtitle: row.subtitle, content: row.content, image_url: row.image_url })
-        .eq("id", row.id);
+        .upsert(fields.map(f => ({
+           id: f.id,
+           key: f.key,
+           label: f.label,
+           value: f.value,
+           section: f.section,
+           field_type: f.field_type
+        })), { onConflict: "id" });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -160,8 +166,18 @@ export default function Admin() {
   const sectionLabels: Record<string, string> = {
     hero: "Hero (Início)",
     about: "Sobre Nós",
+    services: "Serviços",
     contact: "Contato",
+    footer: "Rodapé",
   };
+
+  const groupedContent: Record<string, CMSField[]> = {};
+  if (contentFields) {
+    contentFields.forEach(f => {
+      if (!groupedContent[f.section]) groupedContent[f.section] = [];
+      groupedContent[f.section].push(f);
+    });
+  }
 
   const statusColors: Record<string, string> = {
     pending: "bg-yellow-100 text-yellow-800",
@@ -198,12 +214,15 @@ export default function Admin() {
           </TabsList>
 
           <TabsContent value="content" className="space-y-6">
-            {contentRows?.map((row) => (
+            {!contentFields || contentFields.length === 0 ? (
+               <p className="text-muted-foreground text-center py-8">Nenhum campo de conteúdo encontrado.</p>
+            ) : Object.keys(groupedContent).map((sectionKey) => (
               <ContentEditor
-                key={row.id}
-                row={row}
-                label={sectionLabels[row.section_key] || row.section_key}
+                key={sectionKey}
+                section={sectionLabels[sectionKey] || sectionKey}
+                fields={groupedContent[sectionKey]}
                 onSave={(updated) => updateContent.mutate(updated)}
+                isSaving={updateContent.isPending}
               />
             ))}
           </TabsContent>
@@ -283,31 +302,42 @@ export default function Admin() {
   );
 }
 
-function ContentEditor({ row, label, onSave }: { row: ContentRow; label: string; onSave: (r: ContentRow) => void }) {
-  const [form, setForm] = useState(row);
+function ContentEditor({ section, fields, onSave, isSaving }: { section: string; fields: CMSField[]; onSave: (f: CMSField[]) => void; isSaving: boolean }) {
+  const [localFields, setLocalFields] = useState<CMSField[]>(fields);
+
+  useEffect(() => {
+    setLocalFields(fields);
+  }, [fields]);
+
+  const handleChange = (id: string, value: string) => {
+    setLocalFields(prev => prev.map(f => f.id === id ? { ...f, value } : f));
+  };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">{label}</CardTitle>
+        <CardTitle className="text-lg">{section}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid sm:grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <label className="text-sm font-medium">Título</label>
-            <Input value={form.title || ""} onChange={(e) => setForm({ ...form, title: e.target.value })} />
-          </div>
-          <div className="space-y-1">
-            <label className="text-sm font-medium">Subtítulo</label>
-            <Input value={form.subtitle || ""} onChange={(e) => setForm({ ...form, subtitle: e.target.value })} />
-          </div>
-        </div>
-        <div className="space-y-1">
-          <label className="text-sm font-medium">Conteúdo</label>
-          <Textarea rows={4} value={form.content || ""} onChange={(e) => setForm({ ...form, content: e.target.value })} />
-        </div>
-        <Button onClick={() => onSave(form)} size="sm">
-          <Save className="h-4 w-4 mr-1" /> Salvar
+        {localFields.map(field => (
+           <div key={field.id} className="space-y-1">
+             <label className="text-sm font-medium">{field.label}</label>
+             {field.field_type === 'text' ? (
+                <Textarea 
+                  rows={3} 
+                  value={field.value || ""} 
+                  onChange={(e) => handleChange(field.id, e.target.value)} 
+                />
+             ) : (
+                <Input 
+                  value={field.value || ""} 
+                  onChange={(e) => handleChange(field.id, e.target.value)} 
+                />
+             )}
+           </div>
+        ))}
+        <Button onClick={() => onSave(localFields)} size="sm" disabled={isSaving}>
+          <Save className="h-4 w-4 mr-1" /> {isSaving ? "Salvando..." : "Salvar Grupo"}
         </Button>
       </CardContent>
     </Card>

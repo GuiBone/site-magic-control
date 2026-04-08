@@ -24,10 +24,11 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 interface Props {
+  content?: Record<string, string>;
   services?: Service[];
 }
 
-export function BudgetForm({ services }: Props) {
+export function BudgetForm({ content, services }: Props) {
   const [submitted, setSubmitted] = useState(false);
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -78,13 +79,13 @@ export function BudgetForm({ services }: Props) {
       <div className="container mx-auto px-4">
         <div className="text-center space-y-4 mb-12">
           <p className="text-sm font-semibold text-primary uppercase tracking-widest">
-            Orçamento
+            Contato
           </p>
           <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
-            Solicite seu Orçamento
+            {content?.contact_title || "Fale com a nossa equipe"}
           </h2>
           <p className="text-muted-foreground max-w-md mx-auto">
-            Preencha o formulário abaixo e retornaremos com uma proposta personalizada.
+            {content?.contact_subtitle || "Solicite um orçamento e receba atendimento rápido pelo WhatsApp."}
           </p>
         </div>
 

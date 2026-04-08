@@ -1,4 +1,4 @@
-export function Footer() {
+export function Footer({ content }: { content?: Record<string, string> }) {
   return (
     <footer id="contact" className="bg-foreground text-background py-16">
       <div className="container mx-auto px-4">
@@ -31,13 +31,14 @@ export function Footer() {
             <h4 className="text-sm font-semibold uppercase tracking-wider opacity-80">
               Contato
             </h4>
-            <p className="text-sm opacity-60">
-              Entre em contato para saber mais sobre nossos serviços.
-            </p>
+            <div className="text-sm opacity-60 space-y-1">
+              <p>{content?.contact_phone || "(45) 99999-9999"}</p>
+              <p>{content?.contact_email || "contato@dtfartzone.com.br"}</p>
+            </div>
           </div>
         </div>
         <div className="border-t border-background/10 mt-12 pt-8 text-center text-sm opacity-50">
-          © {new Date().getFullYear()} DTF ARTZONE. Todos os direitos reservados.
+          {content?.footer_text || `© ${new Date().getFullYear()} DTF ARTZONE. Todos os direitos reservados.`}
         </div>
       </div>
     </footer>

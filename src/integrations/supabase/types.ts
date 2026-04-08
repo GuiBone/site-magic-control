@@ -79,33 +79,33 @@ export type Database = {
       }
       site_content: {
         Row: {
-          content: string | null
-          extra: Json | null
           id: string
-          image_url: string | null
-          section_key: string
-          subtitle: string | null
-          title: string | null
+          key: string
+          label: string
+          value: string | null
+          section: string
+          field_type: string
+          created_at: string
           updated_at: string
         }
         Insert: {
-          content?: string | null
-          extra?: Json | null
           id?: string
-          image_url?: string | null
-          section_key: string
-          subtitle?: string | null
-          title?: string | null
+          key: string
+          label: string
+          value?: string | null
+          section: string
+          field_type?: string
+          created_at?: string
           updated_at?: string
         }
         Update: {
-          content?: string | null
-          extra?: Json | null
           id?: string
-          image_url?: string | null
-          section_key?: string
-          subtitle?: string | null
-          title?: string | null
+          key?: string
+          label?: string
+          value?: string | null
+          section?: string
+          field_type?: string
+          created_at?: string
           updated_at?: string
         }
         Relationships: []

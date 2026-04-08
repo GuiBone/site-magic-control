@@ -1,9 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
-import type { SiteContent } from "@/hooks/useContent";
-
-interface Props {
-  content?: SiteContent;
+import { ArrowRight } from "lucide-react";interface Props {
+  content?: Record<string, string>;
 }
 
 export function HeroSection({ content }: Props) {
@@ -13,21 +10,18 @@ export function HeroSection({ content }: Props) {
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-3xl mx-auto text-center space-y-8">
           <div className="inline-block px-4 py-1.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-sm font-medium">
-            Bem-vindo à DTF ARTZONE
+            {content?.hero_badge || "Bem-vindo à DTF ARTZONE"}
           </div>
           <h1 className="text-5xl md:text-7xl font-bold tracking-tight leading-[1.1] text-blue-600 dark:text-blue-500">
-            {content?.title || "DTF ARTZONE"}
+            {content?.hero_title || "Impressão DTF com qualidade profissional"}
           </h1>
           <p className="text-xl md:text-2xl text-muted-foreground max-w-xl mx-auto">
-            {content?.subtitle || "Soluções criativas para o seu negócio"}
-          </p>
-          <p className="text-base text-muted-foreground max-w-lg mx-auto">
-            {content?.content || "Transformamos suas ideias em realidade com qualidade e profissionalismo."}
+            {content?.hero_subtitle || "Soluções criativas para o seu negócio"}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
             <Button size="lg" asChild className="text-base px-8">
-              <a href="#budget">
-                Solicitar Orçamento <ArrowRight className="ml-2 h-5 w-5" />
+              <a href={content?.hero_cta_link || "#budget"}>
+                {content?.hero_cta_text || "Solicitar Orçamento"} <ArrowRight className="ml-2 h-5 w-5" />
               </a>
             </Button>
             <Button size="lg" variant="outline" asChild className="text-base px-8">
