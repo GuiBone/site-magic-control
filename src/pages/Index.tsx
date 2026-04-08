@@ -2,6 +2,7 @@ import { Header } from "@/components/site/Header";
 import { HeroSection } from "@/components/site/HeroSection";
 import { AboutSection } from "@/components/site/AboutSection";
 import { ServicesSection } from "@/components/site/ServicesSection";
+import { GallerySection } from "@/components/site/GallerySection";
 import { BudgetForm } from "@/components/site/BudgetForm";
 import { Footer } from "@/components/site/Footer";
 import { useSiteContent, useServices } from "@/hooks/useContent";
@@ -16,6 +17,7 @@ const Index = () => {
       <HeroSection content={content} />
       <AboutSection content={content} />
       <ServicesSection content={content} services={services} />
+      <GallerySection />
       <BudgetForm content={content} services={services} />
       <Footer content={content} />
     </div>

@@ -125,6 +125,36 @@ export type Database = {
         }
         Relationships: []
       }
+      gallery_items: {
+        Row: {
+          id: string
+          title: string | null
+          image_url: string
+          display_order: number | null
+          is_active: boolean | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          title?: string | null
+          image_url: string
+          display_order?: number | null
+          is_active?: boolean | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          title?: string | null
+          image_url?: string
+          display_order?: number | null
+          is_active?: boolean | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string

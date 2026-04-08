@@ -215,6 +215,7 @@ export default function Admin() {
             <TabsTrigger value="content"><Settings className="h-4 w-4 mr-1" /> Conteúdo</TabsTrigger>
             <TabsTrigger value="budgets"><FileText className="h-4 w-4 mr-1" /> Orçamentos</TabsTrigger>
             <TabsTrigger value="services"><LayoutDashboard className="h-4 w-4 mr-1" /> Serviços</TabsTrigger>
+            <TabsTrigger value="gallery"><LayoutDashboard className="h-4 w-4 mr-1" /> Galeria</TabsTrigger>
           </TabsList>
 
           <TabsContent value="content" className="space-y-6">
@@ -252,6 +253,10 @@ export default function Admin() {
                 ))}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="gallery">
+            <GalleryAdmin />
           </TabsContent>
         </Tabs>
       </div>
@@ -601,7 +606,7 @@ function ImageUploader({ value, onChange }: { value: string; onChange: (url: str
            <p className="text-sm">Nenhuma imagem definida</p>
         </div>
       )}
-      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4">
         <Input 
           type="file" 
           accept="image/*" 
@@ -614,6 +619,303 @@ function ImageUploader({ value, onChange }: { value: string; onChange: (url: str
              <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Enviando...
           </span>
         )}
+      </div>
+    </div>
+  );
+}
+
+function GalleryAdmin() {
+  const [isUploading, setIsUploading] = useState(false);
+  const queryClient = useQueryClient();
+
+  const { data: galleryItems, isLoading } = useQuery({
+    queryKey: ["admin-gallery"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("gallery_items")
+        .select("*")
+        .order("display_order");
+      if (error) throw error;
+      return data as GalleryItemRow[];
+    },
+  });
+
+  const uploadImage = async (file: File, title: string, order: number) => {
+    setIsUploading(true);
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+    const filePath = `gallery/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("site-assets")
+      .upload(filePath, file);
+
+    if (uploadError) {
+      setIsUploading(false);
+      toast.error("Erro ao fazer upload da imagem");
+      return;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from("site-assets")
+      .getPublicUrl(filePath);
+
+    const { error: insertError } = await supabase
+      .from("gallery_items")
+      .insert({
+        image_url: publicUrl,
+        title,
+        display_order: order,
+        is_active: true,
+      });
+
+    setIsUploading(false);
+    if (insertError) {
+      toast.error("Erro ao salvar item na galeria");
+      return;
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["admin-gallery"] });
+    queryClient.invalidateQueries({ queryKey: ["gallery-public"] });
+    toast.success("Imagem adicionada à galeria!");
+  };
+
+  const updateItem = async (item: GalleryItemRow) => {
+    const { error } = await supabase
+      .from("gallery_items")
+      .update({
+        title: item.title,
+        display_order: item.display_order,
+        is_active: item.is_active,
+      })
+      .eq("id", item.id);
+
+    if (error) {
+      toast.error("Erro ao atualizar item");
+      return;
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["admin-gallery"] });
+    queryClient.invalidateQueries({ queryKey: ["gallery-public"] });
+    toast.success("Item atualizado!");
+  };
+
+  const deleteItem = async (id: string) => {
+    if (!confirm("Deseja realmente excluir este item da galeria?")) return;
+
+    const { error } = await supabase
+      .from("gallery_items")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      toast.error("Erro ao excluir item");
+      return;
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["admin-gallery"] });
+    queryClient.invalidateQueries({ queryKey: ["gallery-public"] });
+    toast.success("Item excluído!");
+  };
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle>Galeria de Trabalhos</CardTitle>
+        <UploadGalleryForm onUpload={uploadImage} isUploading={isUploading} />
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : galleryItems && galleryItems.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {galleryItems.map((item) => (
+              <GalleryItemCard
+                key={item.id}
+                item={item}
+                onUpdate={updateItem}
+                onDelete={deleteItem}
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="text-muted-foreground text-center py-8">
+            Nenhum item na galeria. Adicione sua primeira imagem!
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+interface GalleryItemRow {
+  id: string;
+  title: string | null;
+  image_url: string;
+  display_order: number | null;
+  is_active: boolean | null;
+}
+
+function UploadGalleryForm({
+  onUpload,
+  isUploading,
+}: {
+  onUpload: (file: File, title: string, order: number) => void;
+  isUploading: boolean;
+}) {
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [title, setTitle] = useState("");
+  const [order, setOrder] = useState(0);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (f) {
+      setFile(f);
+      setPreview(URL.createObjectURL(f));
+    }
+  };
+
+  const handleSubmit = () => {
+    if (!file) return;
+    onUpload(file, title, order);
+    setFile(null);
+    setPreview(null);
+    setTitle("");
+    setOrder(0);
+  };
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex gap-2">
+        <Input
+          type="file"
+          accept="image/*"
+          onChange={handleFileChange}
+          disabled={isUploading}
+          className="max-w-[200px]"
+        />
+        <Input
+          placeholder="Título (opcional)"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          disabled={isUploading}
+          className="max-w-[150px]"
+        />
+        <Input
+          type="number"
+          placeholder="Ordem"
+          value={order}
+          onChange={(e) => setOrder(Number(e.target.value))}
+          disabled={isUploading}
+          className="max-w-[80px]"
+        />
+        <Button onClick={handleSubmit} disabled={!file || isUploading} size="sm">
+          {isUploading ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <>
+              <UploadCloud className="h-4 w-4 mr-1" /> Adicionar
+            </>
+          )}
+        </Button>
+      </div>
+      {preview && (
+        <div className="relative w-32 h-24 rounded-md overflow-hidden border">
+          <img src={preview} alt="Preview" className="object-cover w-full h-full" />
+          <button
+            onClick={() => {
+              setFile(null);
+              setPreview(null);
+            }}
+            className="absolute top-1 right-1 bg-destructive text-white rounded-full p-0.5 hover:bg-destructive/80"
+          >
+            <Trash2 className="h-3 w-3" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function GalleryItemCard({
+  item,
+  onUpdate,
+  onDelete,
+}: {
+  item: GalleryItemRow;
+  onUpdate: (item: GalleryItemRow) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [form, setForm] = useState(item);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    setForm(item);
+  }, [item]);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    await onUpdate(form);
+    setIsSaving(false);
+  };
+
+  return (
+    <div className="border rounded-lg p-3 space-y-3 bg-card relative">
+      <button
+        onClick={() => onDelete(item.id)}
+        className="absolute top-3 right-3 text-destructive hover:bg-destructive/10 p-1 rounded"
+      >
+        <Trash2 className="h-4 w-4" />
+      </button>
+
+      <div className="relative w-full aspect-[4/3] rounded-md overflow-hidden bg-muted">
+        <img
+          src={item.image_url}
+          alt={item.title || "Galeria"}
+          className="object-cover w-full h-full"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Input
+          placeholder="Título"
+          value={form.title || ""}
+          onChange={(e) => setForm({ ...form, title: e.target.value })}
+          className="text-sm"
+        />
+        <div className="flex gap-2">
+          <Input
+            type="number"
+            placeholder="Ordem"
+            value={form.display_order || 0}
+            onChange={(e) =>
+              setForm({ ...form, display_order: Number(e.target.value) })
+            }
+            className="text-sm w-20"
+          />
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.is_active || false}
+              onChange={(e) =>
+                setForm({ ...form, is_active: e.target.checked })
+              }
+              className="w-4 h-4 cursor-pointer"
+            />
+            Ativo
+          </label>
+        </div>
+        <Button onClick={handleSave} disabled={isSaving} size="sm" className="w-full">
+          {isSaving ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Save className="h-4 w-4 mr-1" />
+          )}
+          {isSaving ? "Salvando..." : "Salvar"}
+        </Button>
       </div>
     </div>
   );
