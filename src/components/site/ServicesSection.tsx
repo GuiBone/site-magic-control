@@ -30,16 +30,23 @@ export function ServicesSection({ content, services }: Props) {
         </div>
         <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
           {items.map((service) => {
-            const Icon = iconMap[service.icon] || Briefcase;
+            const Icon = iconMap[service.icon || ""] || Briefcase;
             return (
               <Card
                 key={service.id}
-                className="group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border-border/50"
+                className="group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border-border/50 overflow-hidden"
               >
-                <CardContent className="p-8 text-center space-y-4">
-                  <div className="mx-auto w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                    <Icon className="h-7 w-7" />
+                {service.image_url && (
+                  <div className="w-full h-48 bg-muted">
+                    <img src={service.image_url} alt={service.title} className="w-full h-full object-cover" />
                   </div>
+                )}
+                <CardContent className="p-8 text-center space-y-4">
+                  {!service.image_url && (
+                    <div className="mx-auto w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                      <Icon className="h-7 w-7" />
+                    </div>
+                  )}
                   <h3 className="text-xl font-bold">{service.title}</h3>
                   <p className="text-muted-foreground leading-relaxed">
                     {service.description}

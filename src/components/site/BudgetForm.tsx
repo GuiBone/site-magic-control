@@ -36,12 +36,12 @@ export function BudgetForm({ content, services }: Props) {
   });
 
   const onSubmit = async (values: FormData) => {
-    const { error } = await supabase.from("budget_requests").insert({
+    const { error } = await supabase.from("quotes").insert({
       name: values.name,
       email: values.email,
       phone: values.phone || null,
       service: values.service,
-      description: values.description,
+      message: values.description,
     });
 
     if (error) {

@@ -6,7 +6,13 @@ import { ArrowRight } from "lucide-react";interface Props {
 export function HeroSection({ content }: Props) {
   return (
     <section id="hero" className="relative min-h-screen flex items-center pt-16 overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5" />
+      <div 
+        className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat transition-all duration-1000"
+        style={{ backgroundImage: `url(${content?.hero_background_image || '/images/hero-default.jpg'})` }}
+      />
+      <div className="absolute inset-0 z-0 bg-background/85 md:bg-background/90 backdrop-blur-[2px]" />
+      <div className="absolute inset-0 z-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/5" />
+      
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-3xl mx-auto text-center space-y-8">
           <div className="inline-block px-4 py-1.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-sm font-medium">

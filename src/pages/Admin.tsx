@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { LogOut, Save, FileText, Settings, LayoutDashboard } from "lucide-react";
+import { LogOut, Save, FileText, Settings, LayoutDashboard, Plus, Trash2, Search, Filter, Phone, Mail, Paperclip, MessageSquare, ExternalLink, UploadCloud, Loader2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface CMSField {
@@ -23,24 +23,28 @@ interface CMSField {
   field_type: string;
 }
 
-interface BudgetRow {
+interface QuoteRow {
   id: string;
   name: string;
-  email: string;
+  email: string | null;
   phone: string | null;
-  service: string;
-  description: string;
+  service: string | null;
+  message: string | null;
+  file_url: string | null;
   status: string;
+  notes: string | null;
   created_at: string;
+  updated_at: string;
 }
 
 interface ServiceRow {
   id: string;
   title: string;
   description: string;
-  icon: string;
-  sort_order: number;
-  active: boolean;
+  icon: string | null;
+  image_url: string | null;
+  display_order: number;
+  is_active: boolean;
 }
 
 export default function Admin() {
@@ -78,15 +82,15 @@ export default function Admin() {
     enabled: isAdmin === true,
   });
 
-  const { data: budgets } = useQuery({
-    queryKey: ["admin-budgets"],
+  const { data: quotes } = useQuery({
+    queryKey: ["admin-quotes"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("budget_requests")
+        .from("quotes")
         .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as BudgetRow[];
+      return data as QuoteRow[];
     },
     enabled: isAdmin === true,
   });
@@ -97,7 +101,7 @@ export default function Admin() {
       const { data, error } = await supabase
         .from("services")
         .select("*")
-        .order("sort_order");
+        .order("display_order");
       if (error) throw error;
       return data as ServiceRow[];
     },
@@ -126,19 +130,25 @@ export default function Admin() {
     onError: () => toast.error("Erro ao atualizar conteúdo."),
   });
 
-  const updateBudgetStatus = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+
+  const createService = useMutation({
+    mutationFn: async () => {
       const { error } = await supabase
-        .from("budget_requests")
-        .update({ status })
-        .eq("id", id);
+        .from("services")
+        .insert({
+          title: "Novo Serviço",
+          description: "",
+          icon: "Briefcase",
+          display_order: 99,
+          is_active: false
+        });
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-budgets"] });
-      toast.success("Status atualizado!");
+      queryClient.invalidateQueries({ queryKey: ["admin-services"] });
+      toast.success("Serviço criado!");
     },
-    onError: () => toast.error("Erro ao atualizar status."),
+    onError: () => toast.error("Erro ao criar serviço."),
   });
 
   if (loading || isAdmin === null) {
@@ -179,12 +189,6 @@ export default function Admin() {
     });
   }
 
-  const statusColors: Record<string, string> = {
-    pending: "bg-yellow-100 text-yellow-800",
-    contacted: "bg-blue-100 text-blue-800",
-    completed: "bg-green-100 text-green-800",
-    rejected: "bg-red-100 text-red-800",
-  };
 
   return (
     <div className="min-h-screen bg-secondary/30">
@@ -227,67 +231,20 @@ export default function Admin() {
             ))}
           </TabsContent>
 
-          <TabsContent value="budgets">
-            <Card>
-              <CardHeader>
-                <CardTitle>Solicitações de Orçamento</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {!budgets?.length ? (
-                  <p className="text-muted-foreground text-center py-8">Nenhum orçamento recebido ainda.</p>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Data</TableHead>
-                          <TableHead>Nome</TableHead>
-                          <TableHead>Email</TableHead>
-                          <TableHead>Serviço</TableHead>
-                          <TableHead>Descrição</TableHead>
-                          <TableHead>Status</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {budgets.map((b) => (
-                          <TableRow key={b.id}>
-                            <TableCell className="whitespace-nowrap text-sm">
-                              {new Date(b.created_at).toLocaleDateString("pt-BR")}
-                            </TableCell>
-                            <TableCell className="font-medium">{b.name}</TableCell>
-                            <TableCell className="text-sm">{b.email}</TableCell>
-                            <TableCell><Badge variant="secondary">{b.service}</Badge></TableCell>
-                            <TableCell className="max-w-xs truncate text-sm">{b.description}</TableCell>
-                            <TableCell>
-                              <Select
-                                value={b.status}
-                                onValueChange={(val) => updateBudgetStatus.mutate({ id: b.id, status: val })}
-                              >
-                                <SelectTrigger className="w-32">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="pending">Pendente</SelectItem>
-                                  <SelectItem value="contacted">Contatado</SelectItem>
-                                  <SelectItem value="completed">Finalizado</SelectItem>
-                                  <SelectItem value="rejected">Rejeitado</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+          <TabsContent value="budgets" className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold tracking-tight">Mini CRM: Orçamentos</h2>
+            </div>
+            <QuoteCRM quotes={quotes || []} />
           </TabsContent>
 
           <TabsContent value="services">
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Serviços</CardTitle>
+                <Button onClick={() => createService.mutate()} disabled={createService.isPending} size="sm">
+                  <Plus className="h-4 w-4 mr-1" /> Novo Serviço
+                </Button>
               </CardHeader>
               <CardContent className="space-y-4">
                 {serviceRows?.map((s) => (
@@ -328,6 +285,11 @@ function ContentEditor({ section, fields, onSave, isSaving }: { section: string;
                   value={field.value || ""} 
                   onChange={(e) => handleChange(field.id, e.target.value)} 
                 />
+             ) : field.field_type === 'image' ? (
+                <ImageUploader 
+                  value={field.value || ""} 
+                  onChange={(url) => handleChange(field.id, url)} 
+                />
              ) : (
                 <Input 
                   value={field.value || ""} 
@@ -348,48 +310,310 @@ function ServiceEditor({ service }: { service: ServiceRow }) {
   const [form, setForm] = useState(service);
   const queryClient = useQueryClient();
 
+  useEffect(() => {
+    setForm(service);
+  }, [service]);
+
   const save = async () => {
     const { error } = await supabase
       .from("services")
-      .update({ title: form.title, description: form.description, icon: form.icon, sort_order: form.sort_order, active: form.active })
+      .update({ 
+        title: form.title, 
+        description: form.description, 
+        icon: form.icon, 
+        image_url: form.image_url,
+        display_order: form.display_order, 
+        is_active: form.is_active 
+      })
       .eq("id", form.id);
+      
     if (error) {
       toast.error("Erro ao salvar serviço.");
       return;
     }
     queryClient.invalidateQueries({ queryKey: ["admin-services"] });
     queryClient.invalidateQueries({ queryKey: ["services"] });
-    toast.success("Serviço atualizado!");
+    toast.success("Serviço salvo!");
+  };
+
+  const remove = async () => {
+    if(!confirm("Atenção: Deseja realmente excluir este serviço?")) return;
+    const { error } = await supabase.from("services").delete().eq("id", form.id);
+    if (error) {
+      toast.error("Erro ao excluir serviço.");
+      return;
+    }
+    queryClient.invalidateQueries({ queryKey: ["admin-services"] });
+    queryClient.invalidateQueries({ queryKey: ["services"] });
+    toast.success("Serviço excluído!");
   };
 
   return (
-    <div className="border rounded-lg p-4 space-y-3">
-      <div className="grid sm:grid-cols-3 gap-3">
+    <div className="border rounded-lg p-4 space-y-3 bg-card relative">
+      <div className="absolute top-4 right-4">
+         <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={remove}>
+            <Trash2 className="h-4 w-4" />
+         </Button>
+      </div>
+      <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-3 pr-10">
         <div className="space-y-1">
           <label className="text-sm font-medium">Título</label>
           <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
         </div>
         <div className="space-y-1">
-          <label className="text-sm font-medium">Ícone</label>
-          <Input value={form.icon} onChange={(e) => setForm({ ...form, icon: e.target.value })} />
+          <label className="text-sm font-medium">Ícone (Lucide)</label>
+          <Input value={form.icon || ""} onChange={(e) => setForm({ ...form, icon: e.target.value })} />
+        </div>
+        <div className="space-y-1">
+          <label className="text-sm font-medium">Imagem (URL)</label>
+          <Input value={form.image_url || ""} onChange={(e) => setForm({ ...form, image_url: e.target.value })} />
         </div>
         <div className="space-y-1">
           <label className="text-sm font-medium">Ordem</label>
-          <Input type="number" value={form.sort_order} onChange={(e) => setForm({ ...form, sort_order: Number(e.target.value) })} />
+          <Input type="number" value={form.display_order} onChange={(e) => setForm({ ...form, display_order: Number(e.target.value) })} />
         </div>
       </div>
       <div className="space-y-1">
         <label className="text-sm font-medium">Descrição</label>
-        <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+        <Textarea rows={2} value={form.description || ""} onChange={(e) => setForm({ ...form, description: e.target.value })} />
       </div>
-      <div className="flex items-center justify-between">
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={form.active} onChange={(e) => setForm({ ...form, active: e.target.checked })} />
-          Ativo
+      <div className="flex items-center justify-between pt-2">
+        <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+          <input type="checkbox" checked={form.is_active} onChange={(e) => setForm({ ...form, is_active: e.target.checked })} className="w-4 h-4 cursor-pointer" />
+          Serviço Ativo
         </label>
         <Button onClick={save} size="sm">
-          <Save className="h-4 w-4 mr-1" /> Salvar
+          <Save className="h-4 w-4 mr-1" /> Salvar Serviço
         </Button>
+      </div>
+    </div>
+  );
+}
+
+function QuoteCRM({ quotes }: { quotes: QuoteRow[] }) {
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+
+  const filtered = (quotes || []).filter(q => {
+    if (statusFilter !== "all" && q.status !== statusFilter) return false;
+    if (search) {
+      const term = search.toLowerCase();
+      const matchName = q.name.toLowerCase().includes(term);
+      const matchEmail = q.email?.toLowerCase().includes(term);
+      const matchPhone = q.phone?.toLowerCase().includes(term);
+      return matchName || matchEmail || matchPhone;
+    }
+    return true;
+  });
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+        <div className="relative w-full sm:w-96">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Buscar por nome, email ou telefone..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+        </div>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os Status</SelectItem>
+              <SelectItem value="novo">Novo</SelectItem>
+              <SelectItem value="em_contato">Em Contato</SelectItem>
+              <SelectItem value="aprovado">Aprovado</SelectItem>
+              <SelectItem value="recusado">Recusado</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      
+      {!filtered.length ? (
+        <Card className="p-8 text-center text-muted-foreground border-dashed">Nenhum orçamento encontrado com estes filtros.</Card>
+      ) : (
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          {filtered.map(q => <QuoteCard key={q.id} quote={q} />)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function QuoteCard({ quote }: { quote: QuoteRow }) {
+  const [form, setForm] = useState(quote);
+  const [isSaving, setIsSaving] = useState(false);
+  const queryClient = useQueryClient();
+
+  const statusColors: Record<string, string> = {
+    novo: "bg-yellow-100 text-yellow-800 border-yellow-200",
+    em_contato: "bg-blue-100 text-blue-800 border-blue-200",
+    aprovado: "bg-green-100 text-green-800 border-green-200",
+    recusado: "bg-red-100 text-red-800 border-red-200",
+  };
+
+  const save = async () => {
+    setIsSaving(true);
+    const { error } = await supabase
+      .from("quotes")
+      .update({ status: form.status, notes: form.notes })
+      .eq("id", form.id);
+    setIsSaving(false);
+    if (error) { toast.error("Erro ao salvar."); return; }
+    queryClient.invalidateQueries({ queryKey: ["admin-quotes"] });
+    toast.success("Orçamento atualizado!");
+  };
+
+  const whatsappLink = form.phone ? `https://wa.me/55${form.phone.replace(/\D/g, '')}` : "";
+  const mailToLink = form.email ? `mailto:${form.email}` : "";
+
+  return (
+    <Card className="relative overflow-hidden group">
+      <div className={`absolute top-0 left-0 w-1.5 h-full ${statusColors[form.status]?.split(' ')[0] || 'bg-gray-100'}`} />
+      <CardContent className="p-5 pl-7 space-y-4">
+        <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4">
+           <div className="space-y-1">
+             <div className="flex flex-wrap items-center gap-2">
+                <h3 className="font-bold text-lg">{form.name}</h3>
+                <Badge variant="outline" className={statusColors[form.status]}>
+                  {form.status.replace("_", " ")}
+                </Badge>
+             </div>
+             <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground mt-1">
+                {form.phone && (
+                   <span className="flex items-center gap-1">
+                     <Phone className="h-3 w-3" /> {form.phone}
+                   </span>
+                )}
+                {form.email && (
+                   <span className="flex items-center gap-1">
+                     <Mail className="h-3 w-3" /> {form.email}
+                   </span>
+                )}
+             </div>
+             {form.service && <Badge variant="secondary" className="mt-2 text-xs">{form.service}</Badge>}
+           </div>
+
+           <div className="flex items-center gap-2 shrinking-0">
+             <Select value={form.status} onValueChange={v => setForm({ ...form, status: v })}>
+               <SelectTrigger className="w-[140px] h-8 text-sm">
+                 <SelectValue />
+               </SelectTrigger>
+               <SelectContent>
+                 <SelectItem value="novo">Novo</SelectItem>
+                 <SelectItem value="em_contato">Em Contato</SelectItem>
+                 <SelectItem value="aprovado">Aprovado</SelectItem>
+                 <SelectItem value="recusado">Recusado</SelectItem>
+               </SelectContent>
+             </Select>
+           </div>
+        </div>
+
+        {form.message && (
+          <div className="bg-muted/50 p-3 rounded-md border border-border/50 text-sm">
+            <span className="font-semibold flex items-center gap-1 mb-1 text-xs uppercase text-muted-foreground tracking-wider"><MessageSquare className="h-3 w-3"/> Mensagem</span>
+            <p className="whitespace-pre-wrap">{form.message}</p>
+          </div>
+        )}
+
+        <div className="pt-2 border-t space-y-3">
+          <div className="space-y-1.5">
+             <label className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1"><FileText className="h-3 w-3"/> Observações Internas</label>
+             <Textarea 
+               placeholder="Anotações, status da negociação, links adicionais..." 
+               className="h-20 text-sm" 
+               value={form.notes || ""} 
+               onChange={e => setForm({ ...form, notes: e.target.value })} 
+             />
+          </div>
+          
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex gap-2">
+               {whatsappLink && (
+                 <Button variant="outline" size="sm" asChild className="text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200">
+                   <a href={whatsappLink} target="_blank" rel="noopener noreferrer"><Phone className="h-3.5 w-3.5 mr-1" /> WhatsApp</a>
+                 </Button>
+               )}
+               {mailToLink && (
+                 <Button variant="outline" size="sm" asChild>
+                   <a href={mailToLink}><Mail className="h-3.5 w-3.5 mr-1" /> E-mail</a>
+                 </Button>
+               )}
+               {form.file_url && (
+                 <Button variant="outline" size="sm" asChild>
+                   <a href={form.file_url} target="_blank" rel="noopener noreferrer"><Paperclip className="h-3.5 w-3.5 mr-1" /> Anexo</a>
+                 </Button>
+               )}
+            </div>
+            
+            <Button onClick={save} size="sm" disabled={isSaving}>
+              <Save className="h-3.5 w-3.5 mr-1" /> {isSaving ? "Salvando..." : "Salvar Lead"}
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ImageUploader({ value, onChange }: { value: string; onChange: (url: string) => void }) {
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+    const filePath = `cms/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('site-assets')
+      .upload(filePath, file);
+
+    if (uploadError) {
+      console.error(uploadError);
+      toast.error("Erro ao fazer upload da imagem");
+      setIsUploading(false);
+      return;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('site-assets')
+      .getPublicUrl(filePath);
+
+    onChange(publicUrl);
+    toast.success("Imagem carregada! Salve o grupo para aplicar.");
+    setIsUploading(false);
+  };
+
+  return (
+    <div className="space-y-4 border rounded-md p-4 bg-muted/20">
+      {value ? (
+        <div className="relative w-full h-48 rounded-md overflow-hidden bg-black/5 border border-border/50">
+          <img src={value} alt="Preview" className="object-contain w-full h-full" />
+        </div>
+      ) : (
+        <div className="w-full h-32 rounded-md bg-muted border border-dashed flex flex-col items-center justify-center text-muted-foreground">
+           <UploadCloud className="h-8 w-8 mb-2 opacity-50" />
+           <p className="text-sm">Nenhuma imagem definida</p>
+        </div>
+      )}
+      <div className="flex items-center gap-4">
+        <Input 
+          type="file" 
+          accept="image/*" 
+          onChange={handleUpload} 
+          disabled={isUploading}
+          className="max-w-[400px] cursor-pointer"
+        />
+        {isUploading && (
+          <span className="flex items-center text-sm text-muted-foreground font-medium">
+             <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Enviando...
+          </span>
+        )}
       </div>
     </div>
   );

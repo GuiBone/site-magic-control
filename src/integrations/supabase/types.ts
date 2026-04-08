@@ -14,66 +14,81 @@ export type Database = {
   }
   public: {
     Tables: {
-      budget_requests: {
+      quotes: {
         Row: {
-          created_at: string
-          description: string
-          email: string
           id: string
           name: string
+          email: string | null
           phone: string | null
-          service: string
+          service: string | null
+          message: string | null
+          file_url: string | null
           status: string
+          notes: string | null
+          created_at: string
+          updated_at: string
         }
         Insert: {
-          created_at?: string
-          description: string
-          email: string
           id?: string
           name: string
+          email?: string | null
           phone?: string | null
-          service: string
+          service?: string | null
+          message?: string | null
+          file_url?: string | null
           status?: string
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
         }
         Update: {
-          created_at?: string
-          description?: string
-          email?: string
           id?: string
           name?: string
+          email?: string | null
           phone?: string | null
-          service?: string
+          service?: string | null
+          message?: string | null
+          file_url?: string | null
           status?: string
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
         }
         Relationships: []
       }
       services: {
         Row: {
-          active: boolean
-          created_at: string
-          description: string
-          icon: string | null
           id: string
-          sort_order: number
           title: string
+          description: string | null
+          icon: string | null
+          image_url: string | null
+          display_order: number | null
+          is_active: boolean | null
+          created_at: string | null
+          updated_at: string | null
         }
         Insert: {
-          active?: boolean
-          created_at?: string
-          description: string
-          icon?: string | null
           id?: string
-          sort_order?: number
           title: string
+          description?: string | null
+          icon?: string | null
+          image_url?: string | null
+          display_order?: number | null
+          is_active?: boolean | null
+          created_at?: string | null
+          updated_at?: string | null
         }
         Update: {
-          active?: boolean
-          created_at?: string
-          description?: string
-          icon?: string | null
           id?: string
-          sort_order?: number
           title?: string
+          description?: string | null
+          icon?: string | null
+          image_url?: string | null
+          display_order?: number | null
+          is_active?: boolean | null
+          created_at?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }

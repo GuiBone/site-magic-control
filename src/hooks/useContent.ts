@@ -11,6 +11,7 @@ export interface CMSField {
 }
 
 export const DEFAULT_CONTENT_FALLBACK: Record<string, string> = {
+  hero_background_image: "/images/hero-default.jpg",
   hero_badge: "Bem-vindo à DTF ARTZONE",
   hero_title: "Impressão DTF com qualidade profissional",
   hero_subtitle: "Produzimos impressões e adesivos personalizados com acabamento premium e atendimento ágil.",
@@ -30,11 +31,18 @@ export const DEFAULT_CONTENT_FALLBACK: Record<string, string> = {
 export interface Service {
   id: string;
   title: string;
-  description: string;
-  icon: string;
-  sort_order: number;
-  active: boolean;
+  description: string | null;
+  icon: string | null;
+  image_url: string | null;
+  display_order: number | null;
+  is_active: boolean | null;
 }
+
+const DEFAULT_SERVICES_FALLBACK: Service[] = [
+  { id: "s1", title: "Impressão DTF Premium", description: "Maior vivacidade de cores e durabilidade superior para estampas em algodão, poliéster e mais. Alta definição para logos e ilustrações complexas.", icon: "Printer", image_url: null, display_order: 10, is_active: true },
+  { id: "s2", title: "Adesivos Personalizados", description: "Adesivos vibrantes e resistentes, perfeitos para branding, brindes corporativos e sinalização. Recorte exclusivo para o seu design.", icon: "Palette", image_url: null, display_order: 20, is_active: true },
+  { id: "s3", title: "Design para Marcas", description: "Garantimos que sua marca se destaque no mercado criando desde a concepção do logotipo à aplicação na estamparia e mídias visuais.", icon: "Briefcase", image_url: null, display_order: 30, is_active: true },
+];
 
 export function useSiteContent() {
   return useQuery({
@@ -45,7 +53,7 @@ export function useSiteContent() {
         .select("*");
       
       if (error) {
-        console.error("Supabase fetch error for site_content, using fallback:", error);
+        console.error("Supabase fetch error for site_content:", error);
         return DEFAULT_CONTENT_FALLBACK;
       }
       
@@ -69,9 +77,16 @@ export function useServices() {
       const { data, error } = await supabase
         .from("services")
         .select("*")
-        .eq("active", true)
-        .order("sort_order");
-      if (error) throw error;
+        .eq("is_active", true)
+        .order("display_order");
+        
+      if (error) {
+        console.error("Erro ao buscar serviços:", error);
+        return DEFAULT_SERVICES_FALLBACK;
+      }
+      
+      if (!data || data.length === 0) return DEFAULT_SERVICES_FALLBACK;
+      
       return data as Service[];
     },
   });
